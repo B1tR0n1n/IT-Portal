@@ -6,11 +6,25 @@ plain HTML, CSS and JavaScript; the PDF work happens in the browser.
     index.html            Home
     provision.html        Intake wizard -> filled SG-IT-014, spreadsheet row, prefilled checklist
     checklist.html        The 20-step build, on screen
-    forms.html            Blank SG-IT-014 and blank checklist
-    vault-builder.html    Local utility: encrypts the build secrets. Do not link this publicly.
-    assets/vault.json     Encrypted build secrets (ships empty; you generate it)
-    assets/docs/          The blank form and the printable checklist
+    forms.html            Blank SG-IT-014 and blank checklist, decrypted on demand
+    assets/vault.json     Encrypted build secrets
+    assets/docs/*.enc.json  The blank form and the printable checklist, encrypted
     .nojekyll             Stops GitHub Pages running the files through Jekyll
+
+The two builder utilities live on the **`tools` branch**, not here. Everything on
+`main` is published by Pages, and those are meant to be run locally:
+
+    git show tools:docs-builder.html > docs-builder.html
+
+## Nothing readable is published
+
+Both blank documents ship as AES-GCM ciphertext. Requesting one by URL returns
+an encrypted blob; `forms.html` decrypts it in the browser after unlock and
+hands it over as an object URL. The same is true of the wizard — it fills the
+same encrypted template, so **provisioning requires unlock**.
+
+The plaintext originals are not in this repository and not in its history. To
+get one back, use *Recover an original* in `docs-builder.html`.
 
 ## Deploying to GitHub Pages
 
@@ -22,10 +36,15 @@ plain HTML, CSS and JavaScript; the PDF work happens in the browser.
 
 ## Before the first real use
 
-Run `vault-builder.html` locally (open the file directly, it needs no server),
-enter the build password, security answer and admin account name, choose a
-passphrase, and replace `assets/vault.json` with the output. Until you do, the
-checklist shows `ask IT` wherever a credential would appear.
+Take `vault-builder.html` from the `tools` branch and run it locally (open the
+file directly, it needs no server), enter the build password, security answer
+and admin account name, choose a passphrase, and replace `assets/vault.json`
+with the output. Until you do, the checklist shows `ask IT` wherever a
+credential would appear.
+
+Then run `docs-builder.html` to encrypt the blank documents under that same
+passphrase. It refuses any phrase that does not open the vault, so a typo
+cannot produce files that look fine and fail later.
 
 Rotating the build password later means running the builder again and replacing
 that one file.

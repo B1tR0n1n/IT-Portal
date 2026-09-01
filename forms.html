@@ -29,15 +29,15 @@
     <p class="eyebrow"><span>03 &mdash; Library</span><span>Blank copies</span></p>
     <h1>Forms</h1>
     <div class="rule"></div>
-    <p class="lede">The unfilled originals. Use these when you want to complete something by hand rather than through the wizard.</p>
+    <p class="lede">The unfilled originals. Use these when you want to complete something by hand rather than through the wizard. Both are published as ciphertext and decrypt in this browser once the vault is unlocked.</p>
 
     <div class="tiles">
-      <a class="tile" href="assets/docs/IT_Asset_Acknowledgement_fillable.pdf" download>
+      <a class="tile" href="#" data-asset="assets/docs/form-sg-it-014.enc.json" data-mode="save">
         <span class="n">SG-IT-014 REV 2.0</span>
         <strong>IT Asset Acknowledgement</strong>
         <span class="d">Two pages, 82 fillable fields, condition dropdowns on every equipment row. Type into it in any PDF reader, then print and sign.</span>
       </a>
-      <a class="tile" href="assets/docs/pc-setup-checklist.html" target="_blank" rel="noopener">
+      <a class="tile" href="#" data-asset="assets/docs/pc-setup-checklist.enc.json" data-mode="open">
         <span class="n">BENCH SHEET</span>
         <strong>Initial PC setup checklist</strong>
         <span class="d">One page, twenty steps, fill-in header for asset tag, serial, MAC and user. Credentials read <em>ask IT</em> unless the wizard fills them.</span>
@@ -56,6 +56,37 @@
 
 <script>window.SITE_ROOT = "./";</script>
 <script src="assets/js/vault.js"></script>
+<script>
+/* The blank forms are published as ciphertext, so a direct URL yields an
+   encrypted blob and nothing else. They are decrypted here, in memory, and
+   handed over as an object URL that never touches the network. */
+document.querySelectorAll("[data-asset]").forEach((el) => {
+  el.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (!Vault.isOpen()) { Vault.openModal(); return; }
+
+    /* window.open has to happen inside the gesture or the popup blocker eats
+       it — decryption is async, so the tab is reserved first and navigated
+       after. A blocked popup leaves tab null and we fall back to saving. */
+    const tab = el.dataset.mode === "open" ? window.open("", "_blank") : null;
+    try {
+      const doc = await Vault.decryptAsset(el.dataset.asset);
+      const url = URL.createObjectURL(new Blob([doc.bytes], { type: doc.type }));
+      if (tab) {
+        tab.location = url;
+      } else {
+        const a = document.createElement("a");
+        a.href = url; a.download = doc.name; a.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      toast("Decrypted " + doc.name);
+    } catch (err) {
+      if (tab) tab.close();
+      toast(err.message);
+    }
+  });
+});
+</script>
 
 </body>
 </html>

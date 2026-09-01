@@ -1,5 +1,7 @@
-const TEMPLATE_URL  = "assets/docs/IT_Asset_Acknowledgement_fillable.pdf";
-const CHECKLIST_URL = "assets/docs/pc-setup-checklist.html";
+/* Both templates ship as AES-GCM ciphertext and open through the vault, so the
+   wizard cannot build anything while locked. */
+const TEMPLATE_URL  = "assets/docs/form-sg-it-014.enc.json";
+const CHECKLIST_URL = "assets/docs/pc-setup-checklist.enc.json";
 
 /* ------------------------------------------------------------------ data */
 const EQUIPMENT = [
@@ -354,9 +356,11 @@ function renderReview() {
 
 /* --------------------------------------------------------------- outputs */
 async function templateBytes() {
-  const res = await fetch(TEMPLATE_URL, { cache: "force-cache" });
-  if (!res.ok) throw new Error("Blank form could not be loaded (" + res.status + ").");
-  return new Uint8Array(await res.arrayBuffer());
+  if (!Vault.isOpen()) {
+    Vault.openModal();
+    throw new Error("the vault is locked — unlock it and try again");
+  }
+  return (await Vault.decryptAsset(TEMPLATE_URL)).bytes;
 }
 
 function download(bytes, filename, mime) {
@@ -446,9 +450,15 @@ function copyRow() {
 
 async function buildChecklist() {
   const a = primaryAsset();
-  const res = await fetch(CHECKLIST_URL, { cache: "force-cache" });
-  if (!res.ok) { alert("Checklist template could not be loaded."); return; }
-  let html = (await res.text())
+  if (!Vault.isOpen()) { Vault.openModal(); return; }
+  let source;
+  try {
+    source = new TextDecoder().decode((await Vault.decryptAsset(CHECKLIST_URL)).bytes);
+  } catch (err) {
+    alert("Checklist template could not be loaded: " + err.message);
+    return;
+  }
+  let html = source
     .replace('id="f_asset" type="text" class="fill"', `id="f_asset" type="text" class="fill" value="${a.tag}"`)
     .replace('id="f_user" type="text" class="fill"', `id="f_user" type="text" class="fill" value="${state.v.employee_name || ""}"`)
     .replace('id="f_serial" type="text" class="fill"', `id="f_serial" type="text" class="fill" value="${a.serial}"`)
