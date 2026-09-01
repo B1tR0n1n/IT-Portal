@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Schneider Geomatics — IT Portal</title>
+<link rel="icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/portal.css">
+</head>
+<body>
+<div class="grid-bg"></div>
+<svg class="noise" xmlns="http://www.w3.org/2000/svg"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#grain)"/></svg>
+
+<div class="shell">
+  <header class="topbar">
+    <a class="mark" href="index.html"><img src="assets/img/logo.png" alt="Schneider Geomatics"></a>
+    <div class="sitename"><b>IT Portal</b>Provisioning &amp; asset control</div>
+    <nav class="topnav">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="provision.html">Provision</a>
+      <a href="checklist.html">Build checklist</a>
+      <a href="forms.html">Forms</a>
+      <button class="lockstate" id="lockbtn">Locked</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <p class="eyebrow"><span>00 &mdash; Designation</span><span>Internal</span></p>
+    <h1>Set a machine up once,<br>and record it properly.</h1>
+    <div class="rule"></div>
+    <p class="lede">Everything needed to take a PC from the box to a signed asset record: the build sequence, the intake wizard that fills SG-IT-014, and the blank forms behind both.</p>
+
+    <div class="tiles">
+      <a class="tile" href="provision.html">
+        <span class="n">01 &mdash; TOOL</span>
+        <strong>Provisioning wizard</strong>
+        <span class="d">One question at a time. Produces the filled acknowledgement, the spreadsheet row, and a prefilled build checklist.</span>
+      </a>
+      <a class="tile" href="checklist.html">
+        <span class="n">02 &mdash; PROCEDURE</span>
+        <strong>Initial PC setup</strong>
+        <span class="d">The twenty-step Windows 11 build, offline account first. Tick it off on screen or print it for the bench.</span>
+      </a>
+      <a class="tile" href="forms.html">
+        <span class="n">03 &mdash; LIBRARY</span>
+        <strong>Blank forms</strong>
+        <span class="d">SG-IT-014 as a fillable PDF, and the empty checklist. For when you want the paper without the wizard.</span>
+      </a>
+    </div>
+
+    <h3 style="margin-top:52px">Build secrets</h3>
+    <p>The standard build password, the security answer, and the local admin account name are not written into these pages. They ship encrypted and decrypt in your browser only after you enter the passphrase, for that tab alone. Unlock once and the checklist fills itself in; leave it locked and every copy says <em>ask IT</em> instead.</p>
+    <p class="dim">This site is served from a public URL. Encryption is what keeps the credentials out of view-source — not the login on the repository.</p>
+  </main>
+
+  <footer class="site">
+    <span>Schneider Geomatics · Information Technology</span>
+    <span>Form SG-IT-014 Rev 2.0</span>
+    <span>Internal use only</span>
+  </footer>
+</div>
+
+<script>window.SITE_ROOT = "./";</script>
+<script src="assets/js/vault.js"></script>
+</body>
+</html>

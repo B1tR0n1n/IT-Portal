@@ -1,0 +1,7 @@
+{
+  "v": 1,
+  "built": null,
+  "kdf": { "name": "PBKDF2", "hash": "SHA-256", "iterations": 310000, "salt": null },
+  "iv": null,
+  "ct": null
+}

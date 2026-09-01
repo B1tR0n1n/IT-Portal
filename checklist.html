@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Build checklist — Schneider Geomatics IT Portal</title>
+<link rel="icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/portal.css">
+<style>
+  .cl-sec { margin-top:34px; }
+  ol.cl { list-style:none; margin:0; padding:0; }
+  ol.cl li { display:grid; grid-template-columns:34px 28px 1fr; align-items:start; padding:9px 0;
+             border-bottom:1px solid rgba(42,38,32,.6); }
+  ol.cl li .num { font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--border-lt); padding-top:6px; }
+  ol.cl input.box { appearance:none; -webkit-appearance:none; width:15px; height:15px; border:1px solid var(--border-lt);
+                    background:var(--bg); margin-top:4px; cursor:pointer; position:relative; }
+  ol.cl input.box:checked { border-color:var(--accent); }
+  ol.cl input.box:checked::after { content:""; position:absolute; left:4px; top:0; width:4px; height:9px;
+                    border:solid var(--accent); border-width:0 2px 2px 0; transform:rotate(42deg); }
+  ol.cl li:has(input.box:checked) .task { color:var(--text-dim); }
+  ol.cl .task { font-size:17.5px; color:var(--text); }
+  ol.cl code { font-family:var(--mono); font-size:14px; color:var(--accent); background:var(--accent-glow); padding:1px 6px; }
+  ol.cl strong { color:var(--text-bright); font-weight:600; }
+  ol.cl .note { grid-column:3; font-size:15.5px; color:var(--text-dim); margin-top:5px;
+                padding-left:12px; border-left:1px solid var(--border-lt); }
+  .clhead { display:flex; gap:14px; flex-wrap:wrap; margin-top:26px; }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<svg class="noise" xmlns="http://www.w3.org/2000/svg"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#grain)"/></svg>
+
+<div class="shell">
+  <header class="topbar">
+    <a class="mark" href="index.html"><img src="assets/img/logo.png" alt="Schneider Geomatics"></a>
+    <div class="sitename"><b>IT Portal</b>Provisioning &amp; asset control</div>
+    <nav class="topnav">
+      <a href="index.html">Home</a>
+      <a href="provision.html">Provision</a>
+      <a href="checklist.html" aria-current="page">Build checklist</a>
+      <a href="forms.html">Forms</a>
+      <button class="lockstate" id="lockbtn">Locked</button>
+    </nav>
+  </header>
+  <main class="wrap narrow">
+    <p class="eyebrow"><span>02 &mdash; Procedure</span><span>20 steps</span></p>
+    <h1>Initial PC setup</h1>
+    <div class="rule"></div>
+    <p class="lede">Windows 11, offline local account first. Work top to bottom; the boxes are yours to tick while you go.</p>
+    <div class="clhead">
+      <a class="btn primary" href="assets/docs/pc-setup-checklist.html" target="_blank" rel="noopener">Open printable sheet</a>
+      <button class="ghost" id="revealbtn">Unlock build secrets</button>
+    </div>
+<h3 class="cl-sec">Out of the box</h3><ol class="cl">
+<li><span class="num">01</span><input type="checkbox" class="box" aria-label="Step 1 done"><span class="task">Plug in the PC and power it on.</span></li>
+<li><span class="num">02</span><input type="checkbox" class="box" aria-label="Step 2 done"><span class="task">Start setup <strong>without</strong> wifi: press Shift+Fn+F10, then run <code>oobe\bypassnro</code></span><div class="note">If the command isn't recognized (24H2 and newer), run <code>start ms-cxh:localonly</code> instead and skip to step 4.</div></li>
+<li><span class="num">03</span><input type="checkbox" class="box" aria-label="Step 3 done"><span class="task">The PC restarts back into setup.</span></li>
+</ol>
+<h3 class="cl-sec">Offline account setup</h3><ol class="cl">
+<li><span class="num">04</span><input type="checkbox" class="box" aria-label="Step 4 done"><span class="task">At "Let's get you connected," choose <strong>I don't have internet</strong>.</span></li>
+<li><span class="num">05</span><input type="checkbox" class="box" aria-label="Step 5 done"><span class="task">Create the user account named for whoever is receiving the PC, in <code>JDoe</code> format.</span></li>
+<li><span class="num">06</span><input type="checkbox" class="box" aria-label="Step 6 done"><span class="task">Set the password: <span class="secret locked" data-secret="build_password" data-mask="•••••• locked">•••••• locked</span></span></li>
+<li><span class="num">07</span><input type="checkbox" class="box" aria-label="Step 7 done"><span class="task">Answer all three security questions: <span class="secret locked" data-secret="security_answer" data-mask="•••••• locked">•••••• locked</span></span></li>
+<li><span class="num">08</span><input type="checkbox" class="box" aria-label="Step 8 done"><span class="task">Turn off diagnostic data, inking and typing, tailored experiences, and advertising ID.</span></li>
+<li><span class="num">09</span><input type="checkbox" class="box" aria-label="Step 9 done"><span class="task">At "Protect this device," skip.</span></li>
+</ol>
+<h3 class="cl-sec">First login</h3><ol class="cl">
+<li><span class="num">10</span><input type="checkbox" class="box" aria-label="Step 10 done"><span class="task">Windows builds the account and signs in.</span></li>
+<li><span class="num">11</span><input type="checkbox" class="box" aria-label="Step 11 done"><span class="task">Remove unused items from the taskbar.</span></li>
+</ol>
+<h3 class="cl-sec">Network and software</h3><ol class="cl">
+<li><span class="num">12</span><input type="checkbox" class="box" aria-label="Step 12 done"><span class="task">Connect to the internet.</span></li>
+<li><span class="num">13</span><input type="checkbox" class="box" aria-label="Step 13 done"><span class="task">Install Chrome, Avatara Connect, and Level.</span></li>
+<li><span class="num">14</span><input type="checkbox" class="box" aria-label="Step 14 done"><span class="task">Set Chrome as the default browser.</span></li>
+<li><span class="num">15</span><input type="checkbox" class="box" aria-label="Step 15 done"><span class="task">Pin Chrome and Avatara Connect to the taskbar.</span></li>
+</ol>
+<h3 class="cl-sec">Identify and record</h3><ol class="cl">
+<li><span class="num">16</span><input type="checkbox" class="box" aria-label="Step 16 done"><span class="task">Rename the PC to its asset tag.</span></li>
+<li><span class="num">17</span><input type="checkbox" class="box" aria-label="Step 17 done"><span class="task">Add the MAC address, serial, asset number, and assigned user to the spreadsheet.</span></li>
+</ol>
+<h3 class="cl-sec">Accounts and permissions</h3><ol class="cl">
+<li><span class="num">18</span><input type="checkbox" class="box" aria-label="Step 18 done"><span class="task">Create a separate local admin account — name <span class="secret locked" data-secret="admin_account" data-mask="•••••• locked">•••••• locked</span>, password <span class="secret locked" data-secret="build_password" data-mask="•••••• locked">•••••• locked</span>, then change it to an Administrator account.</span></li>
+<li><span class="num">19</span><input type="checkbox" class="box" aria-label="Step 19 done"><span class="task">Sign out of the user account, sign in as the admin account, and remove admin rights from the user account.</span></li>
+<li><span class="num">20</span><input type="checkbox" class="box" aria-label="Step 20 done"><span class="task">Sign out and restart the computer.</span></li>
+</ol>
+    <h3 style="margin-top:46px">On the printable copy</h3>
+    <p>The sheet opens in a new tab with fill-in fields for asset tag, serial, MAC and user. With the vault unlocked, the provisioning wizard can hand you the same sheet with those fields already filled and the credentials substituted.</p>
+  </main>
+  <footer class="site">
+    <span>Schneider Geomatics · Information Technology</span>
+    <span>Form SG-IT-014 Rev 2.0</span>
+    <span>Internal use only</span>
+  </footer>
+</div>
+
+<script>window.SITE_ROOT = "./";</script>
+<script src="assets/js/vault.js"></script>
+<script>document.getElementById("revealbtn").onclick = () => Vault.isOpen() ? Vault.lock() : Vault.openModal();Vault.onChange(v => document.getElementById("revealbtn").textContent = v ? "Lock build secrets" : "Unlock build secrets");</script>
+</body>
+</html>
