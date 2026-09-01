@@ -1,0 +1,22 @@
+# Plaintext build secrets — never commit.
+# assets/vault.json is deliberately NOT listed here: it is ciphertext, the site
+# fetches it at runtime, and gitignoring it would break the unlock feature.
+secrets.txt
+secrets.json
+passphrase*
+*-plaintext.*
+vault-plain.json
+vault.json.bak
+
+# Local notes and scratch
+notes.md
+TODO.local.md
+*.local
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
