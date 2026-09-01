@@ -1,7 +1,12 @@
 {
   "v": 1,
-  "built": null,
-  "kdf": { "name": "PBKDF2", "hash": "SHA-256", "iterations": 310000, "salt": null },
-  "iv": null,
-  "ct": null
+  "built": "2026-09-01",
+  "kdf": {
+    "name": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 310000,
+    "salt": "OHZYBaBNpMkkpbxQuaCKWA=="
+  },
+  "iv": "QXTQnQzVcchEYf2F",
+  "ct": "Uy02Ge9+df3HWCw11bBgClNboaTMK4GhovGFi+59CyYucAu/eM4bGk8bzT/s43YGWAcQBlDqx7wdgs84tiFH6SspM61yCsE3YsNnkmtDh0umX2Bvx6t/uR2vp6xYXlkQQhMgmz/PcAZNBojgIkAVxq9J/D4="
 }
