@@ -5,6 +5,8 @@
 
 const Vault = (() => {
   let plain = null;                       // decrypted payload, memory only
+  let cryptoKey = null;                   // derived AES key, memory only
+  let vaultSalt = null;                   // salt the key came from
   const listeners = [];
 
   const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -30,6 +32,8 @@ const Vault = (() => {
       throw new Error("Passphrase rejected.");
     }
     plain = JSON.parse(new TextDecoder().decode(clear));
+    cryptoKey = key;                      // reused for encrypted documents
+    vaultSalt = v.kdf.salt;
     listeners.forEach((fn) => fn(plain));
     paintChrome();
     return plain;
@@ -37,9 +41,32 @@ const Vault = (() => {
 
   function lock() {
     plain = null;
+    cryptoKey = null;
+    vaultSalt = null;
     listeners.forEach((fn) => fn(null));
     paintChrome();
     document.querySelectorAll("[data-secret]").forEach(paintSecret);
+  }
+
+  /* Decrypt a published document encrypted by docs-builder.html. Reuses the
+     key derived at unlock, so no second PBKDF2 run and no passphrase is kept
+     anywhere. Returns { bytes, name, type }. */
+  async function decryptAsset(path) {
+    if (!cryptoKey) throw new Error("Locked \u2014 unlock the vault first.");
+    const res = await fetch(window.SITE_ROOT + path, { cache: "no-store" });
+    if (!res.ok) throw new Error("Encrypted document is not published yet.");
+    const a = await res.json();
+    if (a.salt !== vaultSalt) {
+      throw new Error("This document was encrypted against a different vault. " +
+                      "Rebuild it in docs-builder.html with the current passphrase.");
+    }
+    let clear;
+    try {
+      clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(a.iv) }, cryptoKey, b64(a.ct));
+    } catch (e) {
+      throw new Error("Document failed to decrypt \u2014 the file may be corrupt.");
+    }
+    return { bytes: new Uint8Array(clear), name: a.name, type: a.type || "application/octet-stream" };
   }
 
   const isOpen = () => plain !== null;
@@ -137,7 +164,7 @@ const Vault = (() => {
     bindSecrets();
   }
 
-  return { init, unlock, lock, isOpen, get, onChange, openModal };
+  return { init, unlock, lock, isOpen, get, onChange, openModal, decryptAsset };
 })();
 
 function toast(msg) {

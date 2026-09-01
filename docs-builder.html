@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Document builder — Schneider Geomatics IT Portal</title>
+<link rel="icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/portal.css">
+<style>
+  label { display:block; font-family:var(--mono); font-size:9px; letter-spacing:2px; text-transform:uppercase;
+          color:var(--text-dim); margin-bottom:7px; }
+  .slot { background:var(--bg2); border:1px solid var(--border); border-left:2px solid var(--accent-dim);
+          padding:18px; margin-bottom:16px; }
+  .slot h4 { margin:0 0 4px; font-size:17px; }
+  .slot .path { font-family:var(--mono); font-size:11px; color:var(--text-dim); margin:0 0 14px; }
+  .warn { border-left:2px solid var(--red); background:rgba(166,61,47,.07); padding:16px 18px; margin:26px 0; }
+  .warn p { margin:0; font-size:16.5px; }
+  .warn p + p { margin-top:12px; }
+  .status { font-family:var(--mono); font-size:11px; letter-spacing:1px; margin-top:14px; min-height:17px; }
+  .ok { color:var(--green,#4a7c59); }
+  .bad { color:var(--red); }
+  input[type=file] { font-size:14px; }
+  table.report { width:100%; border-collapse:collapse; margin-top:10px; font-family:var(--mono); font-size:11px; }
+  table.report td { padding:3px 0; color:var(--text-dim); }
+  table.report td:last-child { text-align:right; color:var(--text); }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<svg class="noise" xmlns="http://www.w3.org/2000/svg"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#grain)"/></svg>
+
+<div class="shell">
+  <header class="topbar">
+    <a class="mark" href="index.html"><img src="assets/img/logo.png" alt="Schneider Geomatics"></a>
+    <div class="sitename"><b>IT Portal</b>Document builder</div>
+    <nav class="topnav"><a href="index.html">Back to portal</a></nav>
+  </header>
+
+  <main class="wrap narrow">
+    <p class="eyebrow"><span>Utility</span><span>Run locally</span></p>
+    <h1>Document builder</h1>
+    <div class="rule"></div>
+    <p class="lede">Encrypts the blank forms so the published site carries ciphertext instead of downloadable documents. Everything happens in this browser — nothing is transmitted, and this page makes no network calls.</p>
+
+    <div class="warn">
+      <p>These documents are encrypted under <strong>the same passphrase as the vault</strong>, reusing its salt so a technician derives one key at unlock and it opens everything. Rebuild the vault with a new passphrase and you must rebuild these files too, or they stop opening.</p>
+      <p>What is already published cannot be recalled. Encrypting a document protects it from here forward; any copy downloaded before now is out of your hands permanently.</p>
+    </div>
+
+    <label for="vaultfile">Step 1 — current assets/vault.json</label>
+    <input type="file" id="vaultfile" accept=".json,application/json">
+    <div class="status" id="vaultstatus">Waiting for vault.json — its salt and iteration count are read from here.</div>
+
+    <label for="phrase" style="margin-top:26px">Step 2 — unlock passphrase</label>
+    <input type="password" id="phrase" placeholder="the same phrase techs type to unlock" spellcheck="false" autocomplete="off">
+    <div class="status" id="phrasestatus"></div>
+
+    <h3 style="margin-top:40px">Step 3 — the documents</h3>
+
+    <div class="slot">
+      <h4>IT Asset Acknowledgement (SG-IT-014)</h4>
+      <p class="path">assets/docs/form-sg-it-014.enc.json</p>
+      <input type="file" id="f_form" accept="application/pdf,.pdf">
+    </div>
+
+    <div class="slot">
+      <h4>Initial PC setup checklist</h4>
+      <p class="path">assets/docs/pc-setup-checklist.enc.json</p>
+      <input type="file" id="f_check" accept="text/html,.html,.htm">
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:24px;">
+      <button class="primary" id="go">Encrypt and verify</button>
+    </div>
+    <div class="status" id="result"></div>
+    <div id="report"></div>
+
+    <h3 style="margin-top:50px">What this protects, and what it doesn't</h3>
+    <p>Each document is encrypted with AES-GCM under a 256-bit key derived from your passphrase by PBKDF2-SHA256 at the vault's iteration count. The bytes published to GitHub Pages are ciphertext, so the documents are genuinely absent from the public site rather than merely unlinked — a direct URL returns an encrypted blob and nothing else.</p>
+    <p>It does not make the site private, and it does not survive a weak passphrase. Anyone may download the ciphertext and attack it offline for as long as they like. The authenticated GCM tag means a tampered file is rejected outright rather than decrypting to garbage.</p>
+    <p class="dim">Every file produced here is verified before it is offered: the builder decrypts what it just encrypted and compares it byte for byte against the original. A file that fails that check is never downloaded.</p>
+  </main>
+
+  <footer class="site">
+    <span>Schneider Geomatics · Information Technology</span>
+    <span>Local utility — do not link publicly</span>
+    <span>Internal use only</span>
+  </footer>
+</div>
+
+<script>
+const enc = new TextEncoder();
+
+/* Chunked so a multi-hundred-KB document cannot blow the argument limit
+   the way String.fromCharCode(...wholeArray) would. */
+function b64e(u8) {
+  let s = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < u8.length; i += CHUNK) s += String.fromCharCode(...u8.subarray(i, i + CHUNK));
+  return btoa(s);
+}
+const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function deriveKey(pass, salt, iterations, usages) {
+  const material = await crypto.subtle.importKey(
+    "raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    material, { name: "AES-GCM", length: 256 }, false, usages);
+}
+
+let vaultMeta = null;
+
+document.getElementById("vaultfile").addEventListener("change", async (e) => {
+  const el = document.getElementById("vaultstatus");
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const v = JSON.parse(await file.text());
+    if (!v.kdf || !v.kdf.salt || !v.kdf.iterations) throw new Error("no kdf block");
+    if (!v.ct) throw new Error("vault has no ciphertext — build the vault first");
+    vaultMeta = { salt: v.kdf.salt, iterations: v.kdf.iterations, iv: v.iv, ct: v.ct };
+    el.className = "status ok";
+    el.textContent = `Vault read — ${v.kdf.name}-${v.kdf.hash}, ${v.kdf.iterations.toLocaleString()} iterations, ${b64d(v.kdf.salt).length}-byte salt.`;
+  } catch (err) {
+    vaultMeta = null;
+    el.className = "status bad";
+    el.textContent = "Could not read that as a vault: " + err.message;
+  }
+});
+
+async function buildOne(file, outName, mime, key, salt, iterations) {
+  const src = new Uint8Array(await file.arrayBuffer());
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, src);
+  const asset = {
+    v: 1, alg: "AES-GCM", salt, iterations,
+    iv: b64e(iv), ct: b64e(new Uint8Array(ct)),
+    name: file.name, type: mime, built: new Date().toISOString().slice(0, 10)
+  };
+
+  // Verify before offering it: decrypt what we just wrote, compare byte for byte.
+  const back = new Uint8Array(await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b64d(asset.iv) }, key, b64d(asset.ct)));
+  if (back.length !== src.length || !back.every((b, i) => b === src[i])) {
+    throw new Error(`${outName} failed its round-trip check and was not written`);
+  }
+
+  const json = JSON.stringify(asset);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+  a.download = outName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  return { outName, plain: src.length, cipher: json.length };
+}
+
+document.getElementById("go").onclick = async () => {
+  const out = document.getElementById("result");
+  const report = document.getElementById("report");
+  report.innerHTML = "";
+  out.className = "status";
+
+  const pass = document.getElementById("phrase").value;
+  const form = document.getElementById("f_form").files[0];
+  const check = document.getElementById("f_check").files[0];
+
+  if (!vaultMeta) { out.className = "status bad"; out.textContent = "Load assets/vault.json first."; return; }
+  if (!pass)      { out.className = "status bad"; out.textContent = "Enter the unlock passphrase."; return; }
+  if (!form && !check) { out.className = "status bad"; out.textContent = "Choose at least one document."; return; }
+
+  out.textContent = `Deriving key — ${vaultMeta.iterations.toLocaleString()} PBKDF2 rounds…`;
+  try {
+    const key = await deriveKey(pass, b64d(vaultMeta.salt), vaultMeta.iterations, ["encrypt", "decrypt"]);
+
+    /* Prove the passphrase is the vault's before encrypting anything. Without
+       this a typo yields documents that are perfectly valid under the wrong
+       key — they pass their own round-trip check and then fail on the live
+       site with nothing to explain why. */
+    try {
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: b64d(vaultMeta.iv) }, key, b64d(vaultMeta.ct));
+    } catch (e) {
+      throw new Error("that passphrase does not open this vault \u2014 nothing was encrypted");
+    }
+
+    const rows = [];
+    if (form)  rows.push(await buildOne(form,  "form-sg-it-014.enc.json",     "application/pdf", key, vaultMeta.salt, vaultMeta.iterations));
+    if (check) rows.push(await buildOne(check, "pc-setup-checklist.enc.json", "text/html",       key, vaultMeta.salt, vaultMeta.iterations));
+
+    out.className = "status ok";
+    out.textContent = `${rows.length} file${rows.length > 1 ? "s" : ""} encrypted, verified, and downloaded. Commit into assets/docs/.`;
+    report.innerHTML = "<table class='report'>" + rows.map((r) =>
+      `<tr><td>${r.outName}</td><td>${r.plain.toLocaleString()} B → ${r.cipher.toLocaleString()} B</td></tr>`
+    ).join("") + "</table>";
+  } catch (err) {
+    out.className = "status bad";
+    out.textContent = "Failed: " + err.message;
+  }
+};
+</script>
+</body>
+</html>
