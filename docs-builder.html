@@ -48,26 +48,36 @@
       <p>What is already published cannot be recalled. Encrypting a document protects it from here forward; any copy downloaded before now is out of your hands permanently.</p>
     </div>
 
-    <label for="vaultfile">Step 1 — current assets/vault.json</label>
-    <input type="file" id="vaultfile" accept=".json,application/json">
-    <div class="status" id="vaultstatus">Waiting for vault.json — its salt and iteration count are read from here.</div>
+    <div class="status" id="autostatus">Checking what this page can load on its own…</div>
 
-    <label for="phrase" style="margin-top:26px">Step 2 — unlock passphrase</label>
+    <label for="phrase" style="margin-top:26px">Unlock passphrase</label>
     <input type="password" id="phrase" placeholder="the same phrase techs type to unlock" spellcheck="false" autocomplete="off">
-    <div class="status" id="phrasestatus"></div>
+    <div class="status" id="vaultstatus"></div>
 
-    <h3 style="margin-top:40px">Step 3 — the documents</h3>
-
-    <div class="slot">
-      <h4>IT Asset Acknowledgement (SG-IT-014)</h4>
-      <p class="path">assets/docs/form-sg-it-014.enc.json</p>
-      <input type="file" id="f_form" accept="application/pdf,.pdf">
+    <div class="slot" style="margin-top:26px">
+      <h4>Will be produced</h4>
+      <p class="path">assets/docs/form-sg-it-014.enc.json &mdash; IT Asset Acknowledgement (SG-IT-014)</p>
+      <p class="path" style="margin-bottom:0">assets/docs/pc-setup-checklist.enc.json &mdash; Initial PC setup checklist</p>
     </div>
 
-    <div class="slot">
-      <h4>Initial PC setup checklist</h4>
-      <p class="path">assets/docs/pc-setup-checklist.enc.json</p>
-      <input type="file" id="f_check" accept="text/html,.html,.htm">
+    <div id="pickers">
+      <h3 style="margin-top:40px">Sources</h3>
+      <p class="dim" style="font-size:15px">Only needed when this page cannot reach them itself — opened from disk, or after the plaintext originals have been removed from the site.</p>
+
+      <label for="vaultfile" style="margin-top:18px">assets/vault.json</label>
+      <input type="file" id="vaultfile" accept=".json,application/json">
+
+      <div class="slot" style="margin-top:16px">
+        <h4>IT Asset Acknowledgement (SG-IT-014)</h4>
+        <p class="path">the fillable PDF</p>
+        <input type="file" id="f_form" accept="application/pdf,.pdf">
+      </div>
+
+      <div class="slot">
+        <h4>Initial PC setup checklist</h4>
+        <p class="path">the bench sheet HTML</p>
+        <input type="file" id="f_check" accept="text/html,.html,.htm">
+      </div>
     </div>
 
     <div style="display:flex; gap:12px; margin-top:24px;">
@@ -112,32 +122,64 @@ async function deriveKey(pass, salt, iterations, usages) {
 
 let vaultMeta = null;
 
-document.getElementById("vaultfile").addEventListener("change", async (e) => {
+const auto = { form: null, check: null };
+
+function applyVault(text, origin) {
   const el = document.getElementById("vaultstatus");
-  const file = e.target.files[0];
-  if (!file) return;
   try {
-    const v = JSON.parse(await file.text());
+    const v = JSON.parse(text);
     if (!v.kdf || !v.kdf.salt || !v.kdf.iterations) throw new Error("no kdf block");
     if (!v.ct) throw new Error("vault has no ciphertext — build the vault first");
     vaultMeta = { salt: v.kdf.salt, iterations: v.kdf.iterations, iv: v.iv, ct: v.ct };
     el.className = "status ok";
-    el.textContent = `Vault read — ${v.kdf.name}-${v.kdf.hash}, ${v.kdf.iterations.toLocaleString()} iterations, ${b64d(v.kdf.salt).length}-byte salt.`;
+    el.textContent = `Vault read from ${origin} — ${v.kdf.iterations.toLocaleString()} iterations, ${b64d(v.kdf.salt).length}-byte salt.`;
   } catch (err) {
     vaultMeta = null;
     el.className = "status bad";
     el.textContent = "Could not read that as a vault: " + err.message;
   }
+}
+
+document.getElementById("vaultfile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (file) applyVault(await file.text(), "the file you chose");
 });
 
-async function buildOne(file, outName, mime, key, salt, iterations) {
-  const src = new Uint8Array(await file.arrayBuffer());
+/* Served over http(s), this page can load everything itself — the vault and
+   both documents sit beside it. Opened from file:// the fetches fail and the
+   pickers stay the way in. Every request here is same-origin; nothing about
+   the passphrase ever leaves the browser. */
+(async () => {
+  const el = document.getElementById("autostatus");
+  if (!location.protocol.startsWith("http")) {
+    el.textContent = "Opened from disk — choose the sources below, or open this page from the live site instead.";
+    return;
+  }
+  const grab = async (p) => {
+    const r = await fetch(p, { cache: "no-store" });
+    if (!r.ok) throw new Error(`${p} (${r.status})`);
+    return r;
+  };
+  try {
+    applyVault(await (await grab("assets/vault.json")).text(), "this site");
+    auto.form  = new Uint8Array(await (await grab("assets/docs/IT_Asset_Acknowledgement_fillable.pdf")).arrayBuffer());
+    auto.check = new Uint8Array(await (await grab("assets/docs/pc-setup-checklist.html")).arrayBuffer());
+    el.className = "status ok";
+    el.textContent = `Loaded from this site — form ${auto.form.length.toLocaleString()} B, checklist ${auto.check.length.toLocaleString()} B. Type the passphrase and press the button.`;
+    document.getElementById("pickers").hidden = true;
+  } catch (err) {
+    el.className = "status";
+    el.textContent = `Could not load ${err.message} from this site — use the sources below.`;
+  }
+})();
+
+async function buildOne(src, srcName, outName, mime, key, salt, iterations) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, src);
   const asset = {
     v: 1, alg: "AES-GCM", salt, iterations,
     iv: b64e(iv), ct: b64e(new Uint8Array(ct)),
-    name: file.name, type: mime, built: new Date().toISOString().slice(0, 10)
+    name: srcName, type: mime, built: new Date().toISOString().slice(0, 10)
   };
 
   // Verify before offering it: decrypt what we just wrote, compare byte for byte.
@@ -163,12 +205,17 @@ document.getElementById("go").onclick = async () => {
   out.className = "status";
 
   const pass = document.getElementById("phrase").value;
-  const form = document.getElementById("f_form").files[0];
-  const check = document.getElementById("f_check").files[0];
+  const pickForm  = document.getElementById("f_form").files[0];
+  const pickCheck = document.getElementById("f_check").files[0];
 
-  if (!vaultMeta) { out.className = "status bad"; out.textContent = "Load assets/vault.json first."; return; }
+  const bytes = async (picked, fetched) =>
+    picked ? new Uint8Array(await picked.arrayBuffer()) : fetched;
+  const srcForm  = await bytes(pickForm,  auto.form);
+  const srcCheck = await bytes(pickCheck, auto.check);
+
+  if (!vaultMeta) { out.className = "status bad"; out.textContent = "No vault loaded — choose assets/vault.json below."; return; }
   if (!pass)      { out.className = "status bad"; out.textContent = "Enter the unlock passphrase."; return; }
-  if (!form && !check) { out.className = "status bad"; out.textContent = "Choose at least one document."; return; }
+  if (!srcForm && !srcCheck) { out.className = "status bad"; out.textContent = "No documents available — choose them below."; return; }
 
   out.textContent = `Deriving key — ${vaultMeta.iterations.toLocaleString()} PBKDF2 rounds…`;
   try {
@@ -186,8 +233,12 @@ document.getElementById("go").onclick = async () => {
     }
 
     const rows = [];
-    if (form)  rows.push(await buildOne(form,  "form-sg-it-014.enc.json",     "application/pdf", key, vaultMeta.salt, vaultMeta.iterations));
-    if (check) rows.push(await buildOne(check, "pc-setup-checklist.enc.json", "text/html",       key, vaultMeta.salt, vaultMeta.iterations));
+    if (srcForm)  rows.push(await buildOne(srcForm,  "IT_Asset_Acknowledgement_fillable.pdf",
+                                           "form-sg-it-014.enc.json",     "application/pdf",
+                                           key, vaultMeta.salt, vaultMeta.iterations));
+    if (srcCheck) rows.push(await buildOne(srcCheck, "pc-setup-checklist.html",
+                                           "pc-setup-checklist.enc.json", "text/html",
+                                           key, vaultMeta.salt, vaultMeta.iterations));
 
     out.className = "status ok";
     out.textContent = `${rows.length} file${rows.length > 1 ? "s" : ""} encrypted, verified, and downloaded. Commit into assets/docs/.`;
